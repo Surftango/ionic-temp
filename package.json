@@ -38,7 +38,7 @@
         "rxjs": "5.5.11",
         "sw-toolbox": "3.6.0",
         "zone.js": "0.8.26",
-        "cordova-plugin-CAMAA": "axa-cordova-plugin-master"
+        "cordova-plugin-CAMAA": "./axa-cordova-plugin-master"
     },
     "devDependencies": {
         "@ionic/app-scripts": "3.1.10",
