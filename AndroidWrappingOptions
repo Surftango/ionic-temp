@@ -6,4 +6,4 @@ Say for example for a debug varient, something like "-a ../../platforms/android/
 - All other parameters are normal wrap parameters, which are documented hhttps://docops.ca.com/ca-app-experience-analytics-digital-experience-insights-from-ca/ga/en/configuring/collect-data-from-android-applications
  
  
-___WRAP_OPTIONS___=-a ../../platforms/android/build/outputs/apk/android-debug.apk -p dxi_camdo.plist -S thirdparty/CAMobileAppAnalytics-wrapper -o android-debug.apk -v
+___WRAP_OPTIONS___=-a ../../platforms/android/build/outputs/apk/debug/android-debug.apk -p dxi_camdo.plist -S thirdparty/CAMobileAppAnalytics-wrapper -o android-debug.apk -v
