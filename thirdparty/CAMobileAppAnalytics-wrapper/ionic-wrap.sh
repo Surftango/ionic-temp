@@ -8,7 +8,7 @@ starttime=$(date +%s)
 _dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 _file="${_dir}/$(basename "${BASH_SOURCE[0]}")"
 _workdir=${PWD}
-_apkrelativepath="/platforms/android/build/outputs/apk"
+_apkrelativepath="/platforms/android/build/outputs/apk/debug"
 echo
 echo "|******* CA Mobile App Analytics (for IONIC Pro) *****|"
 echo "Running ionic wrapper  ${_file} on dir ${_workdir}"
