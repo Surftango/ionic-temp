@@ -35,7 +35,7 @@ options:
    -j   <Wrapper jar file>
         CA MAA Android wrapper jar file.  Default is ca-maa-android-sdk-wrapper-<version>.jar
    -v   Verbose
-   -m  Force MultiDex
+   -m   Do not create new dex
 
 EOF
 exit -1;
@@ -58,7 +58,7 @@ checkplistname()
    echo "checking validity of $1 ..."
    if [[ $1 == *camdo.plist ]]
    then
-      echo "Valid plist name"
+      echo ""
    else
       echo "Wrapping Failure :  Wrapping unsuccessful"
       echo "Wrapping Failure :  $1 should end with camdo.plist"

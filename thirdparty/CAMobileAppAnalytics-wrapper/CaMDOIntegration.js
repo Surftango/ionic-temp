@@ -721,4 +721,236 @@ CaMDOIntegration.setCrashFeedback = function (feedback) {
     dictionary.feedback = feedback;
     sendIntegrationEvent(dictionary);
 }
-    
+
+
+//************************ Integration functions ******************************* //
+
+/*global HTMLFormElement window  CaMaaAndroidIntegration */
+/* jshint strict: true */
+
+
+/*
+ Calls the UIWebView
+ */
+function SendMAAEventToUIWebView(dictionaryObj) {
+    //just making sure action is present and not using it further.
+    var action = dictionaryObj.action;
+    if (action == null) {
+        return;
+    }
+    window.maaurl = "camaa://" + JSON.stringify(dictionaryObj);
+    window.location = "camaa://" + JSON.stringify(dictionaryObj);
+
+}
+
+/**
+
+ * @private
+ * Creates unique name global function and assign user passed callback function
+ * to that.
+ *
+ */
+var preProcess = function(nativeCallInfo,isIOS) {
+    try {
+        if (nativeCallInfo.callback && typeof nativeCallInfo.callback === "function") {
+            var callbackfn_name = callback_uuid();
+            window[callbackfn_name] = nativeCallInfo.callback;
+            nativeCallInfo.callback = "";
+            //iOS & SDK Code needs to remove this global object by calling delete window[callbackfn_name];
+            //this is the name of callback function native SDK will use.
+            nativeCallInfo.callbackfn_name = callbackfn_name;
+        }
+
+        if(isIOS && nativeCallInfo.quality) {
+            var intQuality = parseInt(nativeCallInfo.quality);
+            var iosQuality = (intQuality/100)+"";
+            nativeCallInfo.quality = iosQuality;
+        }
+
+    } catch (e) {}
+};
+
+
+/**
+ * @private
+ */
+var callback_uuid = function() {
+    function s4() {
+        return Math.floor((1 + Math.random()) * 0x10000).toString(16).substring(1);
+    }
+    return "callback_" + s4() + s4() + '_' + s4() + '_' + s4() + '_' + s4() + '_' + s4() + s4() + s4();
+};
+
+
+window.addEventListener("load", resetPrevCall, false);
+
+function resetPrevCall(){
+    window.prevCall = 0;
+}
+
+//Will get called by the SDK after PageFinished event
+function sendTiming(){
+    try{
+        if (performance === undefined) {
+            console.log("sendTiming: performance NOT supported");
+            return;
+         }
+        var performanceData = {};
+        var entries = []
+        performanceData.entries = entries;
+        var navStart = performance.timing.navigationStart;
+        var resources = performance.getEntriesByType("resource");
+        if (resources === undefined || resources.length <= 0) {
+            console.log("sendTiming: there are NO `resource` performance records");
+            return;
+         }
+        var b;
+        for (b = 0; b < resources.length; b++) {
+            var resource = resources[b];
+            //if(validateResource(resource)){
+            if(true){
+            var item = {
+              "name":resource.name ? resource.name : "",
+              "initiatortype":resource.initiatorType ? resource.initiatorType : "",
+              "duration":resource.duration ? Math.ceil(resource.duration) : 0,
+              "ts":navStart,
+              "transfersize":resource.transferSize ? resource.transferSize : 0,
+              "starttime":resource.startTime ? Math.ceil(resource.startTime) : 0
+              }
+              performanceData.entries.push(item);
+            }else{
+              console.log("sendTiming: some of the required timing parameter(s) are missing");
+            }
+
+        }
+        var dictionary = {};
+        dictionary.action = "performanceTiming";
+        dictionary.type = "string";
+        dictionary.key = "performanceData";
+        dictionary.value = performanceData;
+        sendIntegrationEvent(dictionary);
+    } catch (e) {}
+}
+
+function validateResource(resource){
+    var requiredProperties = ["name", "initiatorType", "duration", "transferSize", "startTime"];
+    console.log("name: "+resource.name+", initiatorType: "+resource.initiatorType+", duration: "+resource.duration+", startTime: "+resource.startTime+", encodedBodySize: "+resource.encodedBodySize+", decodedBodySize: "+resource.decodedBodySize+", transferSize: "+resource.transferSize);
+    for (var i=0; i < requiredProperties.length; i++) {
+       if(requiredProperties[i] in resource){
+       }else{
+        console.log(requiredProperties[i]+" missing in performance.timing resource");
+        return false;
+       }
+    }
+    return true;
+}
+
+/***
+TODO: Functions that are not used
+*/
+
+function isNonEmptyString(str) {
+  return typeof str == 'string' && !!str.trim();
+}
+
+function parseString(apmCorrAttributes) {
+  var decodedAttributes = decode_utf8(apmCorrAttributes);
+  var allAttributes = decodedAttributes.split(",");
+  allAttributes.forEach(function(attr) {
+      var attrKeyVal = attr.split("=");
+      var attrkey = attrKeyVal.shift().trimLeft();
+      var attrvalue = attrKeyVal.join("=");
+      if(attrkey == "CorBrowsGUID")  {
+        result =  attrvalue;
+      }
+
+  });
+  return result;
+}
+
+
+function parse(c_name) {
+  var corCookie = "";
+  var cookieMap = undefined;
+    if (document.cookie.length > 0) {
+        var cookie = readCookie(c_name);
+        if(cookie) {
+            var keyval = cookie.split("=");
+            corCookie =  keyval[1];
+        }
+    }
+    return parseString(corCookie);
+}
+
+function readCookie(name) {
+//    name += '=';
+    for (var ca = document.cookie.split(/;\s*/), i = ca.length - 1; i >= 0; i--) {
+        if (ca[i].indexOf(name) !== -1) {
+             return ca[i].replace(name, '');
+        }
+    }
+
+}
+
+
+function encode_utf8(s) {
+  return unescape(encodeURIComponent(s));
+}
+
+function decode_utf8(s) {
+  return decodeURIComponent(unescape(s));
+}
+
+function sendIntegrationEvent(dictionary) {
+    sendMAASDKEvent(dictionary);
+}
+
+/**
+ * @private
+ *
+ */
+
+var sendMAASDKEvent = function(nativeCallInfo) {
+    try{
+        //Android Integration
+        if (typeof CaMaaAndroidIntegration != 'undefined') {
+            preProcess(nativeCallInfo,false);
+            CaMaaAndroidIntegration.postMessage(JSON.stringify(nativeCallInfo));
+        }
+        //iOS WKWebview
+        else if (window.webkit && window.webkit.messageHandlers && window.webkit.messageHandlers.camaa) {
+            preProcess(nativeCallInfo,true);
+            try {
+                window.webkit.messageHandlers.camaa.postMessage(nativeCallInfo);
+            }
+            catch (e) {
+            }
+        }
+        //UI Webview
+        else if (window.camaawebview) { // if in ios webview
+            preProcess(nativeCallInfo,true);
+
+            var executeAfter = 400;
+            if(!window.prevCall){
+                window.prevCall = 0;
+            }
+            // alert(window.prevCall)
+            window.prevCall = window.prevCall + executeAfter;
+            if(window.prevCall > 3000){
+                window.prevCall = 0
+            }
+
+            window.setTimeout(function(){SendMAAEventToUIWebView(nativeCallInfo)},window.prevCall );
+
+            //SendMAAEventToUIWebView(nativeCallInfo);
+        }
+        //Do not call , just call callback passed.
+        else {
+            // For any other mobiles as well as api got called without wrapping.t
+            if (nativeCallInfo.callback) {
+                nativeCallInfo.callback(nativeCallInfo.action, null, "NATIVE_CALL_NOT_EXECUTED");
+            }
+        }
+    } catch (e) {}
+};
+
